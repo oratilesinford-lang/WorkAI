@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>WorkAI – Workplace Productivity Suite</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --sidebar-bg: #1E293B;
+    --sidebar-width: 240px;
+    --accent: #6366F1;
+    --accent-hover: #4F46E5;
+    --canvas: #F8FAFC;
+    --white: #FFFFFF;
+    --text-primary: #0F172A;
+    --text-muted: #64748B;
+    --border: #E2E8F0;
+    --success: #10B981;
+    --error: #EF4444;
+    --card-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+    --card-radius: 10px;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--canvas);
+    color: var(--text-primary);
+    display: flex;
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* ── SIDEBAR ── */
+  #sidebar {
+    width: var(--sidebar-width);
+    background: var(--sidebar-bg);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 100;
+    transition: width 0.2s ease;
+    overflow: hidden;
+  }
+
+  .sidebar-logo {
+    padding: 20px 18px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .logo-icon svg { width: 18px; height: 18px; }
+
+  .logo-text {
+    color: #fff;
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: -0.3px;
+    white-space: nowrap;
+  }
+
+  .logo-text span { color: var(--accent); }
+
+  nav { flex: 1; padding: 12px 10px; }
+
+  .nav-label {
+    color: rgba(255,255,255,0.3);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 8px 10px 6px;
+    white-space: nowrap;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 7px;
+    cursor: pointer;
+    color: rgba(255,255,255,0.55);
+    font-weight: 500;
+    transition: all 0.15s;
+    border-left: 2px solid transparent;
+    margin-bottom: 2px;
+    white-space: nowrap;
+  }
+
+  .nav-item:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.85); }
+
+  .nav-item.active {
+    color: #fff;
+    background: rgba(99,102,241,0.15);
+    border-left-color: var(--accent);
+  }
+
+  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+  .sidebar-footer {
+    padding: 14px 18px;
+    border-top: 1px solid rgba(255,255,255,0.07);
+  }
+
+  .powered-badge {
+    font-size: 11px;
+    color: rgba(255,255,255,0.3);
+    text-align: center;
+  }
+
+  /* ── MAIN ── */
+  #main {
+    margin-left: var(--sidebar-width);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* ── TOP BAR ── */
+  #topbar {
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    padding: 0 28px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  .topbar-title { font-weight: 600; font-size: 15px; color: var(--text-primary); }
+  .topbar-sub { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+
+  /* ── DISCLAIMER BANNER ── */
+  #disclaimer {
+    background: #EEF2FF;
+    border-bottom: 1px solid #C7D2FE;
+    padding: 10px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  #disclaimer p { font-size: 12.5px; color: #4338CA; }
+  #disclaimer p strong { font-weight: 600; }
+
+  #dismiss-btn {
+    background: none; border: none; cursor: pointer;
+    color: #4338CA; font-size: 18px; line-height: 1;
+    flex-shrink: 0;
+  }
+
+  /* ── CONTENT ── */
+  #content { padding: 28px; flex: 1; }
+
+  .tool-panel { display: none; }
+  .tool-panel.active { display: block; }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    box-shadow: var(--card-shadow);
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+
+  .card-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 18px;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-title svg { color: var(--accent); }
+
+  /* ── FORM ── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-grid.full { grid-template-columns: 1fr; }
+
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field.span2 { grid-column: span 2; }
+
+  label { font-size: 12px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.02em; }
+
+  input[type="text"], select, textarea {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 9px 12px;
+    font-family: inherit;
+    font-size: 13.5px;
+    color: var(--text-primary);
+    background: var(--white);
+    outline: none;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+
+  input[type="text"]:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+  }
+
+  textarea { resize: vertical; min-height: 100px; line-height: 1.5; }
+
+  /* ── BUTTONS ── */
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    padding: 10px 20px;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 16px;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+  }
+
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .btn-sm {
+    background: var(--canvas);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-sm:hover { background: var(--border); }
+
+  /* ── OUTPUT ── */
+  .output-section { margin-top: 4px; }
+
+  .output-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .output-label { font-size: 12px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.02em; }
+
+  .output-actions { display: flex; gap: 8px; }
+
+  .output-area {
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 14px;
+    font-family: inherit;
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: var(--text-primary);
+    background: var(--canvas);
+    min-height: 140px;
+    width: 100%;
+    outline: none;
+    resize: vertical;
+    transition: border-color 0.15s;
+  }
+
+  .output-area:focus { border-color: var(--accent); }
+
+  /* ── SHIMMER ── */
+  .shimmer {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.3s infinite;
+    border-radius: 6px;
+    height: 140px;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* ── ERROR ── */
+  .error-box {
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    border-radius: 7px;
+    padding: 12px 14px;
+    color: var(--error);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .retry-btn {
+    background: var(--error);
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 5px 10px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  /* ── PROMPT TOGGLE ── */
+  .prompt-toggle {
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    user-select: none;
+  }
+
+  .prompt-toggle:hover { color: var(--accent); }
+
+  .prompt-preview {
+    display: none;
+    margin-top: 8px;
+    background: #F1F5F9;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    font-family: monospace;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .prompt-preview.open { display: block; }
+
+  /* ── CHAT ── */
+  .chat-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 200px);
+    min-height: 400px;
+  }
+
+  .chat-persona-bar {
+    background: var(--canvas);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .chat-persona-bar label { font-size: 12px; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+  .chat-persona-bar input { flex: 1; }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--canvas);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .chat-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 13px;
+    gap: 8px;
+    text-align: center;
+  }
+
+  .chat-empty svg { opacity: 0.3; }
+
+  .msg {
+    display: flex;
+    flex-direction: column;
+    max-width: 78%;
+    gap: 4px;
+  }
+
+  .msg.user { align-self: flex-end; align-items: flex-end; }
+  .msg.assistant { align-self: flex-start; align-items: flex-start; }
+
+  .msg-bubble {
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13.5px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+
+  .msg.user .msg-bubble { background: var(--accent); color: #fff; border-bottom-right-radius: 3px; }
+  .msg.assistant .msg-bubble { background: var(--white); border: 1px solid var(--border); color: var(--text-primary); border-bottom-left-radius: 3px; }
+
+  .msg-meta { font-size: 11px; color: var(--text-muted); }
+
+  .chat-input-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+    align-items: flex-end;
+  }
+
+  .chat-input-row textarea {
+    flex: 1;
+    min-height: 44px;
+    max-height: 120px;
+    resize: none;
+    padding: 10px 13px;
+  }
+
+  .chat-send-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+
+  .chat-send-btn:hover { background: var(--accent-hover); }
+  .chat-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .chat-clear-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.15s;
+  }
+
+  .chat-clear-btn:hover { background: var(--canvas); color: var(--error); border-color: var(--error); }
+
+  /* ── TASK CHECKLIST ── */
+  .task-list { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+
+  .task-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--canvas);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 12px 14px;
+  }
+
+  .task-item input[type="checkbox"] {
+    width: 16px; height: 16px;
+    margin-top: 2px;
+    accent-color: var(--accent);
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  .task-body { flex: 1; }
+  .task-title { font-weight: 600; font-size: 13.5px; margin-bottom: 3px; }
+  .task-desc { font-size: 12.5px; color: var(--text-muted); line-height: 1.5; }
+  .task-meta { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+
+  .badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  .badge-high { background: #FEE2E2; color: #DC2626; }
+  .badge-medium { background: #FEF9C3; color: #B45309; }
+  .badge-low { background: #DCFCE7; color: #16A34A; }
+  .badge-hours { background: #EEF2FF; color: #4338CA; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 1024px) {
+    #sidebar { width: 60px; }
+    .logo-text, .nav-item span, .nav-label, .sidebar-footer { display: none; }
+    .nav-item { justify-content: center; padding: 10px; }
+    #main { margin-left: 60px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .field.span2 { grid-column: span 1; }
+  }
+
+  @media (max-width: 640px) {
+    #sidebar { display: none; }
+    #main { margin-left: 0; }
+    #content { padding: 16px; }
+    .chat-container { height: calc(100vh - 180px); }
+  }
+
+  /* ── COPY TOAST ── */
+  #toast {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    background: #0F172A;
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 9999;
+  }
+
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+      </svg>
+    </div>
+    <span class="logo-text">Work<span>AI</span></span>
+  </div>
+
+  <nav>
+    <div class="nav-label">Tools</div>
+    <div class="nav-item active" onclick="switchTool('email', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg>
+      <span>Email Composer</span>
+    </div>
+    <div class="nav-item" onclick="switchTool('meeting', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>Meeting Summarizer</span>
+    </div>
+    <div class="nav-item" onclick="switchTool('tasks', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <span>Task Planner</span>
+    </div>
+    <div class="nav-item" onclick="switchTool('research', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <span>Research Assistant</span>
+    </div>
+    <div class="nav-item" onclick="switchTool('chat', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span>AI Chatbot</span>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="powered-badge">Powered by Claude AI</div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- TOP BAR -->
+  <div id="topbar">
+    <div>
+      <div class="topbar-title" id="topbar-title">Email Composer</div>
+      <div class="topbar-sub">Generate professional emails instantly</div>
+    </div>
+  </div>
+
+  <!-- DISCLAIMER -->
+  <div id="disclaimer">
+    <p><strong>Responsible AI Notice:</strong> WorkAI uses Claude AI. Outputs may contain errors — always review before sending or acting on AI-generated content.</p>
+    <button id="dismiss-btn" onclick="dismissDisclaimer()">×</button>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="content">
+
+    <!-- EMAIL TOOL -->
+    <div class="tool-panel active" id="tool-email">
+      <div class="card">
+        <div class="card-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg>
+          Compose your email
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Recipient Name & Role</label>
+            <input type="text" id="email-recipient" placeholder="e.g. Sarah Chen, Head of Marketing"/>
+          </div>
+          <div class="field">
+            <label>Your Name & Role</label>
+            <input type="text" id="email-sender" placeholder="e.g. Alex, Product Manager"/>
+          </div>
+          <div class="field">
+            <label>Email Purpose</label>
+            <select id="email-purpose">
+              <option>Follow-up</option>
+              <option>Introduction</option>
+              <option>Request</option>
+              <option>Decline</option>
+              <option>Apology</option>
+              <option>Proposal</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Tone</label>
+            <select id="email-tone">
+              <option>Professional</option>
+              <option>Friendly</option>
+              <option>Assertive</option>
+              <option>Empathetic</option>
+              <option>Concise</option>
+            </select>
+          </div>
+          <div class="field span2">
+            <label>Key Points to Cover</label>
+            <textarea id="email-points" placeholder="Briefly describe what the email should cover..."></textarea>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="generateEmail()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          Generate Email
+        </button>
+      </div>
+
+      <div class="card" id="email-output-card" style="display:none">
+        <div class="output-section">
+          <div class="output-header">
+            <span class="output-label">GENERATED EMAIL</span>
+            <div class="output-actions">
+              <button class="btn-sm" onclick="copyOutput('email-output')">Copy</button>
+              <button class="btn-sm" onclick="generateEmail()">Regenerate</button>
+            </div>
+          </div>
+          <div id="email-loader" class="shimmer" style="display:none"></div>
+          <div id="email-error" style="display:none"></div>
+          <textarea class="output-area" id="email-output" rows="12"></textarea>
+          <div class="prompt-toggle" onclick="togglePrompt('email-prompt')">▸ View AI prompt</div>
+          <div class="prompt-preview" id="email-prompt"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MEETING TOOL -->
+    <div class="tool-panel" id="tool-meeting">
+      <div class="card">
+        <div class="card-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Summarize meeting notes
+        </div>
+        <div class="form-grid full">
+          <div class="field">
+            <label>Meeting Type</label>
+            <select id="meeting-type">
+              <option>Standup</option>
+              <option>Strategy Session</option>
+              <option>Client Call</option>
+              <option>All-Hands</option>
+              <option>1:1</option>
+              <option>Retrospective</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Paste Notes or Transcript</label>
+            <textarea id="meeting-notes" style="min-height:180px" placeholder="Paste raw meeting notes, transcript, or bullet points here..."></textarea>
+          </div>
+          <div class="field">
+            <label>Attendees (optional)</label>
+            <input type="text" id="meeting-attendees" placeholder="e.g. Alice, Bob, Carol"/>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="generateMeeting()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          Summarize Notes
+        </button>
+      </div>
+
+      <div class="card" id="meeting-output-card" style="display:none">
+        <div class="output-section">
+          <div class="output-header">
+            <span class="output-label">MEETING SUMMARY</span>
+            <div class="output-actions">
+              <button class="btn-sm" onclick="copyOutput('meeting-output')">Copy</button>
+              <button class="btn-sm" onclick="generateMeeting()">Regenerate</button>
+            </div>
+          </div>
+          <div id="meeting-loader" class="shimmer" style="display:none"></div>
+          <div id="meeting-error" style="display:none"></div>
+          <textarea class="output-area" id="meeting-output" rows="14"></textarea>
+          <div class="prompt-toggle" onclick="togglePrompt('meeting-prompt')">▸ View AI prompt</div>
+          <div class="prompt-preview" id="meeting-prompt"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TASK TOOL -->
+    <div class="tool-panel" id="tool-tasks">
+      <div class="card">
+        <div class="card-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          Plan your project tasks
+        </div>
+        <div class="form-grid">
+          <div class="field span2">
+            <label>Goal Description</label>
+            <textarea id="task-goal" placeholder="Describe what you're trying to achieve..."></textarea>
+          </div>
+          <div class="field">
+            <label>Deadline</label>
+            <input type="text" id="task-deadline" placeholder="e.g. 2 weeks, end of month"/>
+          </div>
+          <div class="field">
+            <label>Team Size</label>
+            <select id="task-team">
+              <option>Solo</option>
+              <option>2–3 people</option>
+              <option>4–6 people</option>
+              <option>7+ people</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="generateTasks()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          Generate Task Plan
+        </button>
+      </div>
+
+      <div class="card" id="tasks-output-card" style="display:none">
+        <div class="output-header">
+          <span class="output-label">TASK BREAKDOWN</span>
+          <button class="btn-sm" onclick="copyTasksText()">Copy All</button>
+        </div>
+        <div id="tasks-loader" class="shimmer" style="display:none"></div>
+        <div id="tasks-error" style="display:none"></div>
+        <div class="task-list" id="tasks-list"></div>
+        <div class="prompt-toggle" onclick="togglePrompt('tasks-prompt')">▸ View AI prompt</div>
+        <div class="prompt-preview" id="tasks-prompt"></div>
+      </div>
+    </div>
+
+    <!-- RESEARCH TOOL -->
+    <div class="tool-panel" id="tool-research">
+      <div class="card">
+        <div class="card-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          Research a topic
+        </div>
+        <div class="form-grid full">
+          <div class="field">
+            <label>Research Question or Topic</label>
+            <input type="text" id="research-topic" placeholder="e.g. Impact of remote work on team productivity"/>
+          </div>
+          <div class="field">
+            <label>Output Format</label>
+            <select id="research-format">
+              <option>Executive Summary</option>
+              <option>Bullet Points</option>
+              <option>Pros & Cons</option>
+              <option>Comparison Table</option>
+              <option>Timeline</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Depth</label>
+            <select id="research-depth">
+              <option>Quick Overview</option>
+              <option>Detailed Analysis</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="generateResearch()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          Research This Topic
+        </button>
+      </div>
+
+      <div class="card" id="research-output-card" style="display:none">
+        <div class="output-section">
+          <div class="output-header">
+            <span class="output-label">RESEARCH OUTPUT</span>
+            <div class="output-actions">
+              <button class="btn-sm" onclick="copyOutput('research-output')">Copy</button>
+              <button class="btn-sm" onclick="generateResearch()">Regenerate</button>
+            </div>
+          </div>
+          <div id="research-loader" class="shimmer" style="display:none"></div>
+          <div id="research-error" style="display:none"></div>
+          <textarea class="output-area" id="research-output" rows="14"></textarea>
+          <p style="font-size:11.5px;color:var(--text-muted);margin-top:8px;">⚠️ AI research should be verified with primary sources before use.</p>
+
+          <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px;">
+            <div class="output-label" style="margin-bottom:8px;">ASK A FOLLOW-UP</div>
+            <div style="display:flex;gap:8px;">
+              <input type="text" id="research-followup" placeholder="Ask a follow-up question..." style="flex:1"/>
+              <button class="btn-sm" onclick="researchFollowup()" style="white-space:nowrap">Ask →</button>
+            </div>
+          </div>
+
+          <div class="prompt-toggle" onclick="togglePrompt('research-prompt')">▸ View AI prompt</div>
+          <div class="prompt-preview" id="research-prompt"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHAT TOOL -->
+    <div class="tool-panel" id="tool-chat">
+      <div class="card" style="padding:20px;">
+        <div class="chat-persona-bar">
+          <label>Persona:</label>
+          <input type="text" id="chat-persona" placeholder="e.g. Act as a senior project manager" value="You are a helpful workplace AI assistant."/>
+        </div>
+
+        <div class="chat-container">
+          <div class="chat-messages" id="chat-messages">
+            <div class="chat-empty" id="chat-empty">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              <p>Start a conversation with your AI assistant</p>
+            </div>
+          </div>
+
+          <div class="chat-input-row">
+            <textarea id="chat-input" placeholder="Type your message..." rows="1" onkeydown="chatKeydown(event)"></textarea>
+            <button class="chat-send-btn" id="chat-send" onclick="sendChat()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+            <button class="chat-clear-btn" onclick="clearChat()" title="Clear conversation">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<div id="toast">Copied to clipboard!</div>
+
+<script>
+const API_URL = "https://api.anthropic.com/v1/messages";
+const MODEL = "claude-sonnet-4-6";
+
+// ── TOOL SWITCHING ──
+const toolMeta = {
+  email:    { title: "Email Composer",      sub: "Generate professional emails instantly" },
+  meeting:  { title: "Meeting Summarizer",  sub: "Turn raw notes into structured summaries" },
+  tasks:    { title: "Task Planner",        sub: "Break goals into actionable tasks" },
+  research: { title: "Research Assistant",  sub: "Get structured research on any topic" },
+  chat:     { title: "AI Chatbot",          sub: "Conversational AI for workplace questions" },
+};
+
+function switchTool(tool, el) {
+  document.querySelectorAll('.tool-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('tool-' + tool).classList.add('active');
+  el.classList.add('active');
+  document.getElementById('topbar-title').textContent = toolMeta[tool].title;
+  document.querySelector('#topbar .topbar-sub').textContent = toolMeta[tool].sub;
+}
+
+function dismissDisclaimer() {
+  document.getElementById('disclaimer').style.display = 'none';
+}
+
+// ── API CALL ──
+async function callClaude(messages, systemPrompt) {
+  const body = { model: MODEL, max_tokens: 1000, messages };
+  if (systemPrompt) body.system = systemPrompt;
+
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `API error ${res.status}`);
+  }
+
+  const data = await res.json();
+  return data.content.map(b => b.type === "text" ? b.text : "").join("");
+}
+
+// ── HELPERS ──
+function showLoader(id) { document.getElementById(id).style.display = 'block'; }
+function hideLoader(id) { document.getElementById(id).style.display = 'none'; }
+
+function showError(id, msg, retryFn) {
+  const el = document.getElementById(id);
+  el.style.display = 'block';
+  el.innerHTML = `<div class="error-box"><span>⚠️ ${msg}</span><button class="retry-btn" onclick="${retryFn}()">Retry</button></div>`;
+}
+
+function hideError(id) { document.getElementById(id).style.display = 'none'; }
+
+function showOutputCard(id) { document.getElementById(id).style.display = 'block'; }
+
+function copyOutput(id) {
+  const el = document.getElementById(id);
+  navigator.clipboard.writeText(el.value);
+  showToast();
+}
+
+function showToast() {
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function togglePrompt(id) {
+  const el = document.getElementById(id);
+  const toggle = el.previousElementSibling;
+  el.classList.toggle('open');
+  toggle.textContent = el.classList.contains('open') ? '▾ Hide AI prompt' : '▸ View AI prompt';
+}
+
+function setPrompt(id, text) {
+  document.getElementById(id).textContent = text;
+}
+
+// ── EMAIL ──
+async function generateEmail() {
+  const recipient = document.getElementById('email-recipient').value.trim();
+  const sender = document.getElementById('email-sender').value.trim();
+  const purpose = document.getElementById('email-purpose').value;
+  const tone = document.getElementById('email-tone').value;
+  const points = document.getElementById('email-points').value.trim();
+
+  const prompt = `You are a professional email writer.
+
+Write a ${tone.toLowerCase()} ${purpose.toLowerCase()} email.
+From: ${sender || "the sender"}
+To: ${recipient || "the recipient"}
+Key points to cover: ${points || "Not specified"}
+
+Output format:
+Subject: [subject line]
+
+[email body with greeting, paragraphs, and sign-off]
+
+Write only the email. No commentary.`;
+
+  showOutputCard('email-output-card');
+  showLoader('email-loader');
+  hideError('email-error');
+  document.getElementById('email-output').style.display = 'none';
+  setPrompt('email-prompt', prompt);
+
+  try {
+    const result = await callClaude([{ role: "user", content: prompt }]);
+    document.getElementById('email-output').value = result;
+    document.getElementById('email-output').style.display = 'block';
+  } catch(e) {
+    showError('email-error', e.message, 'generateEmail');
+  } finally {
+    hideLoader('email-loader');
+  }
+}
+
+// ── MEETING ──
+async function generateMeeting() {
+  const type = document.getElementById('meeting-type').value;
+  const notes = document.getElementById('meeting-notes').value.trim();
+  const attendees = document.getElementById('meeting-attendees').value.trim();
+
+  const prompt = `You are an expert meeting facilitator.
+
+Summarize these ${type} meeting notes into a structured document.
+${attendees ? `Attendees: ${attendees}` : ""}
+
+Raw notes:
+${notes || "(no notes provided)"}
+
+Output these exact sections:
+## TL;DR
+(2 sentence summary)
+
+## Key Decisions
+- List decisions made
+
+## Action Items
+| Task | Owner | Deadline |
+|------|-------|----------|
+(fill rows)
+
+## Open Questions
+- List unresolved questions
+
+## Next Steps
+- List next steps
+
+Be concise and specific.`;
+
+  showOutputCard('meeting-output-card');
+  showLoader('meeting-loader');
+  hideError('meeting-error');
+  document.getElementById('meeting-output').style.display = 'none';
+  setPrompt('meeting-prompt', prompt);
+
+  try {
+    const result = await callClaude([{ role: "user", content: prompt }]);
+    document.getElementById('meeting-output').value = result;
+    document.getElementById('meeting-output').style.display = 'block';
+  } catch(e) {
+    showError('meeting-error', e.message, 'generateMeeting');
+  } finally {
+    hideLoader('meeting-loader');
+  }
+}
+
+// ── TASKS ──
+let lastTasksData = [];
+
+async function generateTasks() {
+  const goal = document.getElementById('task-goal').value.trim();
+  const deadline = document.getElementById('task-deadline').value.trim();
+  const team = document.getElementById('task-team').value;
+
+  const prompt = `You are a project planning expert.
+
+Break down this goal into specific tasks.
+Goal: ${goal || "Not specified"}
+Deadline: ${deadline || "Not specified"}
+Team: ${team}
+
+Respond ONLY with a JSON array. No markdown, no explanation, just raw JSON:
+[
+  {
+    "title": "Task name",
+    "description": "Brief description of what needs to be done",
+    "hours": 4,
+    "priority": "High"
+  }
+]
+
+Priority must be High, Medium, or Low. Generate 5–8 tasks.`;
+
+  showOutputCard('tasks-output-card');
+  showLoader('tasks-loader');
+  hideError('tasks-error');
+  document.getElementById('tasks-list').innerHTML = '';
+  setPrompt('tasks-prompt', prompt);
+
+  try {
+    const result = await callClaude([{ role: "user", content: prompt }]);
+    const clean = result.replace(/```json|```/g, '').trim();
+    const tasks = JSON.parse(clean);
+    lastTasksData = tasks;
+    renderTasks(tasks);
+  } catch(e) {
+    showError('tasks-error', 'Could not generate tasks. ' + e.message, 'generateTasks');
+  } finally {
+    hideLoader('tasks-loader');
+  }
+}
+
+function renderTasks(tasks) {
+  const list = document.getElementById('tasks-list');
+  list.innerHTML = tasks.map((t, i) => `
+    <div class="task-item">
+      <input type="checkbox" id="task-cb-${i}"/>
+      <div class="task-body">
+        <div class="task-title">${t.title}</div>
+        <div class="task-desc">${t.description}</div>
+        <div class="task-meta">
+          <span class="badge badge-${t.priority.toLowerCase()}">${t.priority}</span>
+          <span class="badge badge-hours">~${t.hours}h</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function copyTasksText() {
+  const text = lastTasksData.map((t, i) =>
+    `[${i+1}] ${t.title} (${t.priority}, ~${t.hours}h)\n${t.description}`
+  ).join('\n\n');
+  navigator.clipboard.writeText(text);
+  showToast();
+}
+
+// ── RESEARCH ──
+let researchHistory = [];
+
+async function generateResearch() {
+  const topic = document.getElementById('research-topic').value.trim();
+  const format = document.getElementById('research-format').value;
+  const depth = document.getElementById('research-depth').value;
+
+  const prompt = `You are a research analyst.
+
+Research this topic: "${topic || "Not specified"}"
+Format: ${format}
+Depth: ${depth}
+
+Provide a well-structured ${format.toLowerCase()} on the topic. Be thorough and factual.`;
+
+  researchHistory = [{ role: "user", content: prompt }];
+
+  showOutputCard('research-output-card');
+  showLoader('research-loader');
+  hideError('research-error');
+  document.getElementById('research-output').style.display = 'none';
+  setPrompt('research-prompt', prompt);
+
+  try {
+    const result = await callClaude(researchHistory);
+    researchHistory.push({ role: "assistant", content: result });
+    document.getElementById('research-output').value = result;
+    document.getElementById('research-output').style.display = 'block';
+  } catch(e) {
+    showError('research-error', e.message, 'generateResearch');
+  } finally {
+    hideLoader('research-loader');
+  }
+}
+
+async function researchFollowup() {
+  const question = document.getElementById('research-followup').value.trim();
+  if (!question) return;
+  if (!researchHistory.length) { alert('Generate a research result first.'); return; }
+
+  researchHistory.push({ role: "user", content: question });
+  document.getElementById('research-followup').value = '';
+  showLoader('research-loader');
+  document.getElementById('research-output').style.display = 'none';
+
+  try {
+    const result = await callClaude(researchHistory);
+    researchHistory.push({ role: "assistant", content: result });
+    const prev = document.getElementById('research-output').value;
+    document.getElementById('research-output').value = prev + '\n\n---\nFollow-up: ' + question + '\n\n' + result;
+    document.getElementById('research-output').style.display = 'block';
+  } catch(e) {
+    showError('research-error', e.message, 'researchFollowup');
+  } finally {
+    hideLoader('research-loader');
+  }
+}
+
+// ── CHAT ──
+let chatHistory = [];
+
+function chatKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+
+  input.value = '';
+  document.getElementById('chat-empty').style.display = 'none';
+
+  appendChatMsg('user', msg);
+  chatHistory.push({ role: 'user', content: msg });
+
+  const sendBtn = document.getElementById('chat-send');
+  sendBtn.disabled = true;
+
+  const typingId = appendChatMsg('assistant', '…');
+
+  try {
+    const persona = document.getElementById('chat-persona').value.trim() || "You are a helpful workplace AI assistant.";
+    const result = await callClaude(chatHistory, persona);
+    chatHistory.push({ role: 'assistant', content: result });
+    updateChatMsg(typingId, result);
+  } catch(e) {
+    updateChatMsg(typingId, '⚠️ Error: ' + e.message);
+  } finally {
+    sendBtn.disabled = false;
+    input.focus();
+  }
+}
+
+let msgIdCounter = 0;
+
+function appendChatMsg(role, text) {
+  const id = 'msg-' + (++msgIdCounter);
+  const container = document.getElementById('chat-messages');
+  const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  div.id = id;
+  div.innerHTML = `
+    <div class="msg-bubble">${escHtml(text)}</div>
+    <div class="msg-meta">${time}</div>
+  `;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return id;
+}
+
+function updateChatMsg(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.querySelector('.msg-bubble').textContent = text;
+  document.getElementById('chat-messages').scrollTop = 99999;
+}
+
+function clearChat() {
+  chatHistory = [];
+  document.getElementById('chat-messages').innerHTML = `
+    <div class="chat-empty" id="chat-empty">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <p>Start a conversation with your AI assistant</p>
+    </div>`;
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+</script>
+</body>
+</html>
