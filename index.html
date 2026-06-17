@@ -524,6 +524,32 @@
   .badge-medium { background: #FEF9C3; color: #B45309; }
   .badge-low { background: #DCFCE7; color: #16A34A; }
   .badge-hours { background: #EEF2FF; color: #4338CA; }
+  .badge-assignee { background: #F0F9FF; color: #0369A1; }
+
+  .task-done .task-title { text-decoration: line-through; color: var(--text-muted); }
+  .task-done { opacity: 0.55; }
+
+  .phase-group { margin-top: 18px; }
+  .phase-group:first-child { margin-top: 0; }
+  .phase-label {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.07em;
+    text-transform: uppercase; color: var(--text-muted);
+    margin-bottom: 8px; padding-left: 2px;
+  }
+
+  .tasks-progress-wrap { margin-bottom: 14px; }
+  .tasks-progress-stats {
+    display: flex; justify-content: space-between;
+    font-size: 12px; color: var(--text-muted); margin-bottom: 6px;
+  }
+  .tasks-progress-bar {
+    height: 6px; background: var(--border);
+    border-radius: 99px; overflow: hidden;
+  }
+  .tasks-progress-fill {
+    height: 100%; background: var(--accent);
+    border-radius: 99px; transition: width 0.3s ease; width: 0%;
+  }
 
   /* ── RESPONSIVE ── */
   @media (max-width: 1024px) {
@@ -780,6 +806,15 @@
         </div>
         <div id="tasks-loader" class="shimmer" style="display:none"></div>
         <div id="tasks-error" style="display:none"></div>
+        <div id="tasks-progress-wrap" class="tasks-progress-wrap" style="display:none">
+          <div class="tasks-progress-stats">
+            <span id="tasks-progress-text">0 of 0 complete</span>
+            <span id="tasks-hours-text">0h total</span>
+          </div>
+          <div class="tasks-progress-bar">
+            <div class="tasks-progress-fill" id="tasks-progress-fill"></div>
+          </div>
+        </div>
         <div class="task-list" id="tasks-list"></div>
         <div class="prompt-toggle" onclick="togglePrompt('tasks-prompt')">▸ View AI prompt</div>
         <div class="prompt-preview" id="tasks-prompt"></div>
@@ -1067,24 +1102,30 @@ async function generateTasks() {
   const deadline = document.getElementById('task-deadline').value.trim();
   const team = document.getElementById('task-team').value;
 
+  const isSolo = team === 'Solo';
   const prompt = `You are a project planning expert.
 
-Break down this goal into specific tasks.
+Break down this goal into phases with specific tasks.
 Goal: ${goal || "Not specified"}
 Deadline: ${deadline || "Not specified"}
 Team: ${team}
 
-Respond ONLY with a JSON array. No markdown, no explanation, just raw JSON:
+Respond ONLY with a JSON array of phases. No markdown, no explanation, just raw JSON:
 [
   {
-    "title": "Task name",
-    "description": "Brief description of what needs to be done",
-    "hours": 4,
-    "priority": "High"
+    "phase": "Phase name (e.g. Planning, Development, Testing, Launch)",
+    "tasks": [
+      {
+        "title": "Task name",
+        "description": "Brief description of what needs to be done",
+        "hours": 4,
+        "priority": "High"${isSolo ? '' : ',\n        "owner": "Short role (e.g. Lead, Designer, Dev, QA)"'}
+      }
+    ]
   }
 ]
 
-Priority must be High, Medium, or Low. Generate 5–8 tasks.`;
+Priority must be High, Medium, or Low. Generate 3–4 phases with 2–4 tasks each.`;
 
   showOutputCard('tasks-output-card');
   showLoader('tasks-loader');
@@ -1105,26 +1146,57 @@ Priority must be High, Medium, or Low. Generate 5–8 tasks.`;
   }
 }
 
-function renderTasks(tasks) {
+function renderTasks(phases) {
   const list = document.getElementById('tasks-list');
-  list.innerHTML = tasks.map((t, i) => `
-    <div class="task-item">
-      <input type="checkbox" id="task-cb-${i}"/>
-      <div class="task-body">
-        <div class="task-title">${t.title}</div>
-        <div class="task-desc">${t.description}</div>
-        <div class="task-meta">
-          <span class="badge badge-${t.priority.toLowerCase()}">${t.priority}</span>
-          <span class="badge badge-hours">~${t.hours}h</span>
-        </div>
-      </div>
+  let idx = 0;
+  list.innerHTML = phases.map(phase => `
+    <div class="phase-group">
+      <div class="phase-label">${phase.phase}</div>
+      ${phase.tasks.map(t => {
+        const i = idx++;
+        return `
+          <div class="task-item" id="task-item-${i}">
+            <input type="checkbox" id="task-cb-${i}" onchange="updateProgress()"/>
+            <div class="task-body">
+              <div class="task-title">${t.title}</div>
+              <div class="task-desc">${t.description}</div>
+              <div class="task-meta">
+                <span class="badge badge-${t.priority.toLowerCase()}">${t.priority}</span>
+                <span class="badge badge-hours">~${t.hours}h</span>
+                ${t.owner ? `<span class="badge badge-assignee">${t.owner}</span>` : ''}
+              </div>
+            </div>
+          </div>`;
+      }).join('')}
     </div>
   `).join('');
+
+  const totalTasks = phases.reduce((s, p) => s + p.tasks.length, 0);
+  const totalHours = phases.reduce((s, p) => s + p.tasks.reduce((a, t) => a + (t.hours || 0), 0), 0);
+  document.getElementById('tasks-progress-wrap').style.display = 'block';
+  document.getElementById('tasks-progress-text').textContent = `0 of ${totalTasks} complete`;
+  document.getElementById('tasks-hours-text').textContent = `${totalHours}h total`;
+  document.getElementById('tasks-progress-fill').style.width = '0%';
+}
+
+function updateProgress() {
+  const items = document.querySelectorAll('.task-item');
+  let done = 0;
+  items.forEach((item, i) => {
+    const cb = document.getElementById(`task-cb-${i}`);
+    if (cb && cb.checked) { item.classList.add('task-done'); done++; }
+    else { item.classList.remove('task-done'); }
+  });
+  const total = items.length;
+  document.getElementById('tasks-progress-text').textContent = `${done} of ${total} complete`;
+  document.getElementById('tasks-progress-fill').style.width = `${total ? Math.round(done / total * 100) : 0}%`;
 }
 
 function copyTasksText() {
-  const text = lastTasksData.map((t, i) =>
-    `[${i+1}] ${t.title} (${t.priority}, ~${t.hours}h)\n${t.description}`
+  const text = lastTasksData.map(phase =>
+    `## ${phase.phase}\n` + phase.tasks.map((t, i) =>
+      `[${i+1}] ${t.title} (${t.priority}, ~${t.hours}h${t.owner ? ', ' + t.owner : ''})\n${t.description}`
+    ).join('\n\n')
   ).join('\n\n');
   navigator.clipboard.writeText(text);
   showToast();
