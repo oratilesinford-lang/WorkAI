@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>WorkAI – Workplace Productivity Suite</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -526,6 +527,25 @@
   .badge-hours { background: #EEF2FF; color: #4338CA; }
   .badge-assignee { background: #F0F9FF; color: #0369A1; }
 
+  /* ── MARKDOWN RENDER ── */
+  .md-output { font-size: 13.5px; line-height: 1.75; color: var(--text); padding: 4px 0; }
+  .md-output h1, .md-output h2 { font-size: 14px; font-weight: 700; margin: 18px 0 6px; color: var(--text); }
+  .md-output h3 { font-size: 13px; font-weight: 600; margin: 14px 0 4px; }
+  .md-output h1:first-child, .md-output h2:first-child { margin-top: 0; }
+  .md-output p { margin: 0 0 8px; }
+  .md-output ul, .md-output ol { padding-left: 18px; margin: 0 0 8px; }
+  .md-output li { margin-bottom: 3px; }
+  .md-output table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 10px 0; }
+  .md-output th { background: var(--canvas); padding: 7px 10px; text-align: left; font-weight: 600; border: 1px solid var(--border); }
+  .md-output td { padding: 6px 10px; border: 1px solid var(--border); }
+  .md-output code { background: var(--canvas); padding: 1px 5px; border-radius: 3px; font-family: monospace; font-size: 12px; }
+  .md-output pre { background: var(--canvas); padding: 12px; border-radius: 6px; overflow-x: auto; margin: 8px 0; }
+  .md-output pre code { background: none; padding: 0; }
+  .md-output strong { font-weight: 600; }
+  .md-output hr { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+  .followup-block { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .followup-q { font-size: 12px; font-weight: 600; color: var(--accent); margin-bottom: 6px; }
+
   .task-done .task-title { text-decoration: line-through; color: var(--text-muted); }
   .task-done { opacity: 0.55; }
 
@@ -760,7 +780,7 @@
           </div>
           <div id="meeting-loader" class="shimmer" style="display:none"></div>
           <div id="meeting-error" style="display:none"></div>
-          <textarea class="output-area" id="meeting-output" rows="14"></textarea>
+          <div class="md-output" id="meeting-output" style="display:none"></div>
           <div class="prompt-toggle" onclick="togglePrompt('meeting-prompt')">▸ View AI prompt</div>
           <div class="prompt-preview" id="meeting-prompt"></div>
         </div>
@@ -868,7 +888,7 @@
           </div>
           <div id="research-loader" class="shimmer" style="display:none"></div>
           <div id="research-error" style="display:none"></div>
-          <textarea class="output-area" id="research-output" rows="14"></textarea>
+          <div class="md-output" id="research-output" style="display:none"></div>
           <p style="font-size:11.5px;color:var(--text-muted);margin-top:8px;">⚠️ AI research should be verified with primary sources before use.</p>
 
           <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px;">
@@ -983,7 +1003,8 @@ function showOutputCard(id) { document.getElementById(id).style.display = 'block
 
 function copyOutput(id) {
   const el = document.getElementById(id);
-  navigator.clipboard.writeText(el.value);
+  const text = el.tagName === 'TEXTAREA' ? el.value : (el.dataset.raw || el.innerText);
+  navigator.clipboard.writeText(text);
   showToast();
 }
 
@@ -1085,8 +1106,10 @@ Be concise and specific.`;
 
   try {
     const result = await callClaude([{ role: "user", content: prompt }]);
-    document.getElementById('meeting-output').value = result;
-    document.getElementById('meeting-output').style.display = 'block';
+    const el = document.getElementById('meeting-output');
+    el.dataset.raw = result;
+    el.innerHTML = marked.parse(result);
+    el.style.display = 'block';
   } catch(e) {
     showError('meeting-error', e.message, 'generateMeeting');
   } finally {
@@ -1229,8 +1252,10 @@ Provide a well-structured ${format.toLowerCase()} on the topic. Be thorough and 
   try {
     const result = await callClaude(researchHistory);
     researchHistory.push({ role: "assistant", content: result });
-    document.getElementById('research-output').value = result;
-    document.getElementById('research-output').style.display = 'block';
+    const el = document.getElementById('research-output');
+    el.dataset.raw = result;
+    el.innerHTML = marked.parse(result);
+    el.style.display = 'block';
   } catch(e) {
     showError('research-error', e.message, 'generateResearch');
   } finally {
@@ -1246,14 +1271,17 @@ async function researchFollowup() {
   researchHistory.push({ role: "user", content: question });
   document.getElementById('research-followup').value = '';
   showLoader('research-loader');
-  document.getElementById('research-output').style.display = 'none';
 
   try {
     const result = await callClaude(researchHistory);
     researchHistory.push({ role: "assistant", content: result });
-    const prev = document.getElementById('research-output').value;
-    document.getElementById('research-output').value = prev + '\n\n---\nFollow-up: ' + question + '\n\n' + result;
-    document.getElementById('research-output').style.display = 'block';
+    const el = document.getElementById('research-output');
+    el.dataset.raw = (el.dataset.raw || '') + '\n\nFollow-up: ' + question + '\n\n' + result;
+    const block = document.createElement('div');
+    block.className = 'followup-block';
+    block.innerHTML = `<div class="followup-q">Follow-up: ${escHtml(question)}</div>` + marked.parse(result);
+    el.appendChild(block);
+    el.style.display = 'block';
   } catch(e) {
     showError('research-error', e.message, 'researchFollowup');
   } finally {
@@ -1307,8 +1335,9 @@ function appendChatMsg(role, text) {
   const div = document.createElement('div');
   div.className = `msg ${role}`;
   div.id = id;
+  const bubble = role === 'assistant' ? marked.parse(text) : escHtml(text);
   div.innerHTML = `
-    <div class="msg-bubble">${escHtml(text)}</div>
+    <div class="msg-bubble${role === 'assistant' ? ' md-output' : ''}">${bubble}</div>
     <div class="msg-meta">${time}</div>
   `;
   container.appendChild(div);
@@ -1318,7 +1347,10 @@ function appendChatMsg(role, text) {
 
 function updateChatMsg(id, text) {
   const el = document.getElementById(id);
-  if (el) el.querySelector('.msg-bubble').textContent = text;
+  if (el) {
+    const bubble = el.querySelector('.msg-bubble');
+    bubble.innerHTML = marked.parse(text);
+  }
   document.getElementById('chat-messages').scrollTop = 99999;
 }
 
