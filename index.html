@@ -885,8 +885,8 @@
 <div id="toast">Copied to clipboard!</div>
 
 <script>
-const API_URL = "https://api.anthropic.com/v1/messages";
-const MODEL = "claude-sonnet-4-6";
+const API_URL = "/api/chat";
+const MODEL = "llama-3.3-70b-versatile";
 
 // ── TOOL SWITCHING ──
 const toolMeta = {
@@ -912,8 +912,10 @@ function dismissDisclaimer() {
 
 // ── API CALL ──
 async function callClaude(messages, systemPrompt) {
-  const body = { model: MODEL, max_tokens: 1000, messages };
-  if (systemPrompt) body.system = systemPrompt;
+  const allMessages = systemPrompt
+    ? [{ role: "system", content: systemPrompt }, ...messages]
+    : messages;
+  const body = { model: MODEL, max_tokens: 1000, messages: allMessages };
 
   const res = await fetch(API_URL, {
     method: "POST",
@@ -927,7 +929,7 @@ async function callClaude(messages, systemPrompt) {
   }
 
   const data = await res.json();
-  return data.content.map(b => b.type === "text" ? b.text : "").join("");
+  return data.choices[0].message.content;
 }
 
 // ── HELPERS ──
